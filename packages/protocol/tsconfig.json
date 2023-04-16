@@ -1,22 +1,17 @@
 {
   "compilerOptions": {
-    "target": "es2019",
-    "module": "CommonJS",
-    "moduleResolution": "node",
+    "module": "ES2015",
+    "esModuleInterop": true,
+    "target": "ES2021",
     "noImplicitAny": true,
-    "strictNullChecks": true,
-    "strictPropertyInitialization": true,
-    "inlineSources": true,
+    "moduleResolution": "node",
     "sourceMap": true,
-    "allowSyntheticDefaultImports": true,
-    "experimentalDecorators": true,
-    "newLine": "lf",
-    "jsx": "react",
-    "noEmitOnError": true,
+    "declaration": true,
     "baseUrl": ".",
+    "outDir": "./lib",
     "paths": {
-      "*": ["*"]
+      "*": ["node_modules/*", "src/types/*"]
     }
   },
-  "include": ["src/**/*.ts"]
+  "include": ["*"]
 }

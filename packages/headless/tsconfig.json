@@ -15,8 +15,8 @@
     "noEmitOnError": true,
     "baseUrl": ".",
     "paths": {
-      "*": ["*", "packages/*"]
+      "*": ["*"]
     }
   },
-  "include": ["src/**/*.ts", "typings/*.d.ts"]
+  "include": ["src/**/*.ts", "typings/*.d.ts", "../protocol/index.ts", "../protocol/src/**/*.ts"]
 }

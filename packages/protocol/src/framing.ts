@@ -60,7 +60,7 @@ export class FramingDecoderPipeline extends Pipeline {
 /**
  * The framing duplex pipeline
  */
-export default class FramingPipeline extends DuplexPipeline {
+export class FramingPipeline extends DuplexPipeline {
   readPipeline: FramingDecoderPipeline;
   writePipeline: FramingEncoderPipeline;
 

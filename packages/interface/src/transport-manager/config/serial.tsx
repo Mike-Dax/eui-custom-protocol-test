@@ -8,8 +8,10 @@ import {
 import {
   ConnectionInterface,
   ConnectionStaticMetadataReporter,
+  DeliverabilityManagerOneShot,
   DiscoveryHintConsumer,
   Hint,
+  QueryManagerNone,
   TransportFactory,
   TypeCache,
 } from '@electricui/core'
@@ -31,6 +33,15 @@ import { USBHintProducer } from '@electricui/transport-node-usb-discovery'
 import { LEDCodec } from './codecs'
 import { CodecDuplexPipelineWithDefaults } from '@electricui/protocol-binary-codecs'
 
+import {
+  FramingPipeline,
+  ProtocolPipeline,
+  COMMAND_NAMES,
+  MessageMetadata,
+  decode,
+  byteToHexString,
+} from 'protocol'
+
 const typeCache = new TypeCache()
 
 const serialProducer = new SerialPortHintProducer({
@@ -49,66 +60,32 @@ const serialTransportFactory = new TransportFactory(
 
     const transport = new SerialTransport(options)
 
-    const deliverabilityManager = new DeliverabilityManagerBinaryProtocol({
+    const deliverabilityManager = new DeliverabilityManagerOneShot(
       connectionInterface,
-      timeout: 1000,
-    })
-
-    const queryManager = new QueryManagerBinaryProtocol({
-      connectionInterface,
-    })
-
-    const cobsPipeline = new COBSPipeline()
-    const binaryPipeline = new BinaryPipeline()
-    const typeCachePipeline = new BinaryTypeCachePipeline(typeCache)
-
-    // If you have runtime generated messageIDs, add them as an array as a second argument
-    // `name` is added because it is requested by the metadata requester before handshake.
-    const undefinedMessageIDGuard = new UndefinedMessageIDGuardPipeline(
-      typeCache,
-      ['name'],
     )
 
-    const codecPipeline = new CodecDuplexPipelineWithDefaults()
+    const queryManager = new QueryManagerNone(connectionInterface)
 
-    const customCodecs = [
-      new LEDCodec(), // Create each instance of the codecs
-    ]
+    const framingPipeline = new FramingPipeline()
+    const protocolPipeline = new ProtocolPipeline()
 
-    // Add custom codecs.
-    codecPipeline.addCodecs(customCodecs)
+    // const codecPipeline = new CodecDuplexPipelineWithDefaults({
+    //   passthroughNoMatch: true,
+    // })
 
-    const largePacketPipeline = new BinaryLargePacketHandlerPipeline({
-      connectionInterface,
-      maxPayloadLength: 100,
-    })
+    // // Add custom codecs.
+    // codecPipeline.addCodecs(customCodecs)
 
     const connectionStaticMetadata = new ConnectionStaticMetadataReporter({
       name: 'Serial',
       baudRate: options.baudRate,
     })
 
-    const heartbeatMetadata = new HeartbeatConnectionMetadataReporter({
-      interval: 500,
-      timeout: 1000,
-      // measurePipeline: true,
-    })
-
     connectionInterface.setTransport(transport)
     connectionInterface.setQueryManager(queryManager)
     connectionInterface.setDeliverabilityManager(deliverabilityManager)
-    connectionInterface.setPipelines([
-      cobsPipeline,
-      binaryPipeline,
-      largePacketPipeline,
-      codecPipeline,
-      typeCachePipeline,
-      undefinedMessageIDGuard,
-    ])
-    connectionInterface.addMetadataReporters([
-      connectionStaticMetadata,
-      heartbeatMetadata,
-    ])
+    connectionInterface.setPipelines([framingPipeline, protocolPipeline])
+    connectionInterface.addMetadataReporters([connectionStaticMetadata])
 
     return connectionInterface.finalise()
   },

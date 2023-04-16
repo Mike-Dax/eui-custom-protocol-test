@@ -11,8 +11,13 @@ import {
 } from '@electricui/core'
 
 import { CancellationToken } from '@electricui/async-utilities'
-import { ProcessName,  RequestName,  } from './metadata'
-import { serialConsumer, serialProducer, usbProducer, usbToSerialTransformer } from './serial'
+import {
+  buildSerialConsumer,
+  buildSerialProducer,
+  buildSerialTransportFactory,
+  buildUsbProducer,
+  buildUsbToSerialTransformer,
+} from './serial'
 
 import { BinaryConnectionHandshake } from '@electricui/protocol-binary-connection-handshake'
 import { HintValidatorBinaryHandshake } from '@electricui/protocol-binary'
@@ -110,15 +115,16 @@ export function deviceManagerFactory() {
     return [connectionHandshakeReadWrite]
   }
 
-  const requestName = new RequestName()
-  const processName = new ProcessName()
+  const serialProducer = buildSerialProducer()
+  const transportFactory = buildSerialTransportFactory()
+  const serialConsumer = buildSerialConsumer(transportFactory)
+  const usbProducer = buildUsbProducer()
+  const usbToSerialTransformer = buildUsbToSerialTransformer(serialProducer)
 
   deviceManager.setCreateHintValidatorsCallback(hintValidators)
   deviceManager.addHintProducers([serialProducer, usbProducer])
-  deviceManager.addHintConsumers([serialConsumer, ])
+  deviceManager.addHintConsumers([serialConsumer])
   deviceManager.addHintTransformers([usbToSerialTransformer])
-  deviceManager.addDeviceMetadataRequesters([requestName, ])
-  deviceManager.addDiscoveryMetadataProcessors([processName, ])
   deviceManager.setCreateRouterCallback(createRouter)
   deviceManager.setCreateQueueCallback(createQueue)
   deviceManager.setCreateHandshakesCallback(createHandshakes)

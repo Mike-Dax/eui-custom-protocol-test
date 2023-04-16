@@ -101,15 +101,10 @@ function createHandshakes(
   return [connectionHandshakeReadWrite]
 }
 
-const requestName = new RequestName()
-const processName = new ProcessName()
-
 deviceManager.setCreateHintValidatorsCallback(hintValidators)
 deviceManager.addHintProducers([serialProducer, usbProducer])
 deviceManager.addHintConsumers([serialConsumer])
 deviceManager.addHintTransformers([usbToSerialTransformer])
-deviceManager.addDeviceMetadataRequesters([requestName])
-deviceManager.addDiscoveryMetadataProcessors([processName])
 deviceManager.setCreateRouterCallback(createRouter)
 deviceManager.setCreateQueueCallback(createQueue)
 deviceManager.setCreateHandshakesCallback(createHandshakes)
