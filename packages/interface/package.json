@@ -181,7 +181,7 @@
   "scripts": {
     "build": "electricui-build-tools app && electron-builder",
     "dev": "electricui-build-tools dev",
-    "setup": "arc install-electron && yarn sdks vscode",
+    "setup": "arc install-electron",
     "start": "electricui-build-tools dev"
   },
   "templateChannel": "latest",

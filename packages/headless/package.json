@@ -56,7 +56,7 @@
   "productName": "Headless Tests",
   "scripts": {
     "build": "echo 'unimplemented, if building directly executable scripts is important to you, please let us know at support@electricui.com'",
-    "setup": "yarn sdks vscode",
+    "setup": "",
     "start": "rollup -c"
   },
   "templateChannel": "latest",
