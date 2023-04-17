@@ -9,7 +9,6 @@ import {
   MessageRouterLogRatioMetadata,
   hotReloadDeviceManager,
 } from '@electricui/core'
-import { ProcessName, RequestName } from './metadata'
 import {
   serialConsumer,
   serialProducer,
