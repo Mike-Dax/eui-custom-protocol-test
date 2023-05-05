@@ -89,7 +89,7 @@ export class HintValidatorFirmwareAddressPoll extends DiscoveryHintValidator {
 
     const md5 = crypto.createHash('md5')
     md5.update(this.connection.getHash())
-    
+
     // There aren't actual board IDs, so just mix the firmware version with the connection hash, we need to get the md5 hash
     // of it because boardIDs can't contain slashes
     let boardID = `${String(firmwareVersion)}-${md5.digest().toString('hex')}`
@@ -104,41 +104,38 @@ export class HintValidatorFirmwareAddressPoll extends DiscoveryHintValidator {
   public async startValidation() {
     // Loop from 0x01 to 0xfe
 
-    for (let attempt = 0; attempt < 3; attempt++) {
-      // Do 3 attempts
-      for (let address = 0x01; address <= 0xfe; address++) {
-        // Halt if the higher level token has been cancelled
-        this.cancellationToken.haltIfCancelled()
+    for (let address = 0x01; address <= 0xfe; address++) {
+      // Halt if the higher level token has been cancelled
+      this.cancellationToken.haltIfCancelled()
 
-        // If we've received it in the meantime, bail
-        if (this.hasReceivedFirmwareVersion) {
-          debugLog(
-            'hasReceivedFirmwareVersion went true while waiting to send next search packet',
-          )
-          return
+      // If we've received it in the meantime, bail
+      if (this.hasReceivedFirmwareVersion) {
+        debugLog(
+          'hasReceivedFirmwareVersion went true while waiting to send next search packet',
+        )
+        return
+      }
+
+      const cancellationToken = new CancellationToken(
+        'validation attempt',
+      ).deadline(this.perAddressTimeout)
+
+      // If the root cancellation token cancels, trickle it down to this one.
+      this.cancellationToken.subscribe(cancellationToken.cancel)
+
+      try {
+        await this.sendRequest(address, cancellationToken)
+      } catch (e) {
+        // If this wasn't a timeout, rethrow the error
+        if (cancellationToken.caused(e) || this.cancellationToken.caused(e)) {
+          // no problem
+        } else {
+          console.error(`write failure due to e`, e)
+
+          throw e
         }
-
-        const cancellationToken = new CancellationToken(
-          'validation attempt',
-        ).deadline(this.perAddressTimeout)
-
-        // If the root cancellation token cancels, trickle it down to this one.
-        this.cancellationToken.subscribe(cancellationToken.cancel)
-
-        try {
-          await this.sendRequest(address, cancellationToken)
-        } catch (e) {
-          // If this wasn't a timeout, rethrow the error
-          if (cancellationToken.caused(e) || this.cancellationToken.caused(e)) {
-            // no problem
-          } else {
-            console.error(`write failure due to e`, e)
-
-            throw e
-          }
-        } finally {
-          this.cancellationToken.unsubscribe(cancellationToken.cancel)
-        }
+      } finally {
+        this.cancellationToken.unsubscribe(cancellationToken.cancel)
       }
     }
 
