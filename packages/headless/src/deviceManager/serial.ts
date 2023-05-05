@@ -42,6 +42,7 @@ import {
   MessageMetadata,
   decode,
   byteToHexString,
+  ReqResQueuePipeline,
 } from 'protocol'
 
 export const typeCache = new TypeCache()
@@ -79,6 +80,7 @@ export function buildSerialTransportFactory() {
 
       const framingPipeline = new FramingPipeline()
       const protocolPipeline = new ProtocolPipeline()
+      const reqresPipeline = new ReqResQueuePipeline()
 
       // const codecPipeline = new CodecDuplexPipelineWithDefaults({
       //   passthroughNoMatch: true,
@@ -95,7 +97,11 @@ export function buildSerialTransportFactory() {
       connectionInterface.setTransport(transport)
       connectionInterface.setQueryManager(queryManager)
       connectionInterface.setDeliverabilityManager(deliverabilityManager)
-      connectionInterface.setPipelines([framingPipeline, protocolPipeline])
+      connectionInterface.setPipelines([
+        framingPipeline,
+        protocolPipeline,
+        reqresPipeline,
+      ])
       connectionInterface.addMetadataReporters([connectionStaticMetadata])
 
       return connectionInterface.finalise()

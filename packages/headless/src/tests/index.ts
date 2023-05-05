@@ -1,1 +1,1 @@
-export * from './basic-comms-test'
+export * from './device-manager-test'

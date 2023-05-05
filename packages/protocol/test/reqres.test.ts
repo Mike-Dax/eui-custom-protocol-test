@@ -1,5 +1,5 @@
 import { CancellationToken } from '@electricui/async-utilities'
-import { describe, expect, it, xit } from '@jest/globals'
+import { describe, expect, it } from '@jest/globals'
 
 import { ProtocolDecoderPipeline } from '../src/decoder'
 import * as sinon from 'sinon'
@@ -18,7 +18,7 @@ import { ReqResQueuePipeline } from '../src/reqres-pipeline'
 import { CallbackSink } from './common'
 
 describe('Request Resolve pipeline', () => {
-  xit('can send write requests one after another', async () => {
+  it('can send write requests one after another', async () => {
     const cancellationToken = new CancellationToken().deadline(100)
 
     const { uiWrite, hardwareReply, hardwareReceived, uiReceived } =
@@ -40,7 +40,7 @@ describe('Request Resolve pipeline', () => {
 
     expect(hardwareReceived.length).toBe(3)
   })
-  xit('can send query requests one after another, and the replies are correctly accounted for', async () => {
+  it('can send query requests one after another, and the replies are correctly accounted for', async () => {
     const cancellationToken = new CancellationToken().deadline(100)
 
     let i = 0
@@ -84,7 +84,7 @@ describe('Request Resolve pipeline', () => {
     expect(uiReceived[1].metadata.address).toBe(0x01)
     expect(uiReceived[2].metadata.address).toBe(0x01)
   })
-  xit('sends queries in serial when the UI sends them concurrently', async () => {
+  it('sends queries in serial when the UI sends them concurrently', async () => {
     const cancellationToken = new CancellationToken().deadline(100)
 
     let i = 0
