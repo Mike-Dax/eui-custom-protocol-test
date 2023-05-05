@@ -40,6 +40,7 @@ import {
   MessageMetadata,
   decode,
   byteToHexString,
+  ReqResQueuePipeline,
 } from 'protocol'
 
 const typeCache = new TypeCache()
@@ -68,6 +69,7 @@ const serialTransportFactory = new TransportFactory(
 
     const framingPipeline = new FramingPipeline()
     const protocolPipeline = new ProtocolPipeline()
+    const reqresPipeline = new ReqResQueuePipeline()
 
     // const codecPipeline = new CodecDuplexPipelineWithDefaults({
     //   passthroughNoMatch: true,
@@ -84,7 +86,11 @@ const serialTransportFactory = new TransportFactory(
     connectionInterface.setTransport(transport)
     connectionInterface.setQueryManager(queryManager)
     connectionInterface.setDeliverabilityManager(deliverabilityManager)
-    connectionInterface.setPipelines([framingPipeline, protocolPipeline])
+    connectionInterface.setPipelines([
+      framingPipeline,
+      protocolPipeline,
+      reqresPipeline,
+    ])
     connectionInterface.addMetadataReporters([connectionStaticMetadata])
 
     return connectionInterface.finalise()
@@ -130,7 +136,7 @@ const serialConsumer = new DiscoveryHintConsumer({
       path: identification.path,
       baudRate: configuration.baudRate,
       // if you have an Arduino that resets on connection, uncomment this line to delay the connection
-      attachmentDelay: 2500,
+      // attachmentDelay: 2500,
     }
 
     return options

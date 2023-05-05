@@ -1,13 +1,12 @@
 import {
   CancellationToken,
   Connection,
-  ConnectionMetadataRatio,
-  ConnectionMetadataRule,
   Device,
   DeviceManager,
   Hint,
-  MessageRouterLogRatioMetadata,
   hotReloadDeviceManager,
+  MessageRouterLastReceived,
+  MessageQueueImmediate,
 } from '@electricui/core'
 import {
   serialConsumer,
@@ -16,10 +15,7 @@ import {
   usbToSerialTransformer,
 } from './serial'
 
-import { BinaryConnectionHandshake } from '@electricui/protocol-binary-connection-handshake'
-import { HintValidatorBinaryHandshake } from '@electricui/protocol-binary'
-import { MessageQueueBinaryFIFO } from '@electricui/protocol-binary-fifo-queue'
-import { SERIAL_TRANSPORT_KEY } from '@electricui/transport-node-serial'
+import { HintValidatorFirmwareAddressPoll } from 'protocol'
 
 /**
  * Create our device manager!
@@ -27,41 +23,13 @@ import { SERIAL_TRANSPORT_KEY } from '@electricui/transport-node-serial'
 export const deviceManager = new DeviceManager()
 
 function createRouter(device: Device) {
-  const router = new MessageRouterLogRatioMetadata({
-    device,
-    ratios: [
-      new ConnectionMetadataRatio('latency', false, 1, (sum: number, latency: number) => sum + latency), // prettier-ignore
-      new ConnectionMetadataRatio('jitter', false, 0.1, (sum: number, jitter: number) => sum + jitter), // prettier-ignore
-      new ConnectionMetadataRatio('packetLoss', false, 2, (factor: number, packetLoss: number) => factor * packetLoss), // prettier-ignore
-      new ConnectionMetadataRatio('consecutiveHeartbeats', true, 0.1, (minimum: number, consecutiveHeartbeats: number) => Math.min(minimum, consecutiveHeartbeats)), // prettier-ignore
-    ],
-    rules: [
-      new ConnectionMetadataRule(['latency'], ({ latency }) => latency < 400),
-      new ConnectionMetadataRule(
-        ['packetLoss', 'consecutiveHeartbeats'],
-        ({ packetLoss, consecutiveHeartbeats }) => {
-          // If there are more than three consecutive heartbeats, the connection
-          // is considered acceptable despite potential previous packet loss.
-          if (consecutiveHeartbeats > 3) {
-            return true
-          }
-
-          // Otherwise we require less than 20% packet loss
-          return packetLoss <= 0.2
-        },
-      ),
-    ],
-  })
+  const router = new MessageRouterLastReceived(device)
 
   return router
 }
 
 function createQueue(device: Device) {
-  return new MessageQueueBinaryFIFO({
-    device,
-    interval: 10,
-    concurrentMessages: 100,
-  })
+  return new MessageQueueImmediate(device)
 }
 
 function hintValidators(
@@ -69,35 +37,16 @@ function hintValidators(
   connection: Connection,
   cancellationToken: CancellationToken,
 ) {
-  // Serial
-  if (hint.getTransportKey() === SERIAL_TRANSPORT_KEY) {
-    const validator = new HintValidatorBinaryHandshake(
-      hint,
-      connection,
-      cancellationToken,
-      {
-        attemptTiming: [0, 10, 100, 1000, 2000, 5000],
-      },
-    ) // 2 second timeout
-
-    return [validator]
-  }
-
-  return []
+  return [
+    new HintValidatorFirmwareAddressPoll(hint, connection, cancellationToken),
+  ]
 }
 
 function createHandshakes(
   device: Device,
   cancellationToken: CancellationToken,
 ) {
-  // Assume it's an eUI device, do the binary handshakes
-  const connectionHandshakeReadWrite = new BinaryConnectionHandshake({
-    device: device,
-    preset: 'default',
-    cancellationToken,
-  })
-
-  return [connectionHandshakeReadWrite]
+  return []
 }
 
 deviceManager.setCreateHintValidatorsCallback(hintValidators)
