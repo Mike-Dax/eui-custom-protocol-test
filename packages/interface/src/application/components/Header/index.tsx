@@ -50,6 +50,7 @@ export const Header = (
                   disconnect().catch(err => {
                     console.warn('Failed to disconnect', err)
                   })
+                  navigate(`/`)
                 }}
               />
             ) : (
