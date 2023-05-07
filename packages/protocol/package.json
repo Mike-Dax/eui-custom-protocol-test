@@ -8,15 +8,15 @@
   "main": "lib/index.js",
   "types": "lib/index.d.ts",
   "dependencies": {
-    "@electricui/async-utilities": "0.9.2",
-    "@electricui/core": "0.9.3",
-    "@electricui/timing": "0.10.1",
+    "@electricui/async-utilities": "0.9.3",
+    "@electricui/core": "0.9.5-5d1573e4a",
+    "@electricui/timing": "0.10.2",
     "async-mutex": "^0.4.0",
     "debug": "^4.3.4"
   },
   "devDependencies": {
     "@electricui/jest-transform": "0.1.0-e7e39493f",
-    "@electricui/rollup-loader": "0.9.2",
+    "@electricui/rollup-loader": "0.9.3",
     "@jest/globals": "^26.6.2",
     "@rollup/plugin-commonjs": "^22.0.2",
     "@rollup/plugin-node-resolve": "^14.0.0",
