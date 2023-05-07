@@ -1,11 +1,4 @@
 import {
-  BinaryPipeline,
-  BinaryTypeCachePipeline,
-  DeliverabilityManagerBinaryProtocol,
-  QueryManagerBinaryProtocol,
-  UndefinedMessageIDGuardPipeline,
-} from '@electricui/protocol-binary'
-import {
   ConnectionInterface,
   ConnectionStaticMetadataReporter,
   DeliverabilityManagerOneShot,
@@ -24,23 +17,15 @@ import {
   SerialTransportOptions,
 } from '@electricui/transport-node-serial'
 
-import { BinaryLargePacketHandlerPipeline } from '@electricui/protocol-binary-large-packet-handler'
-import { COBSPipeline } from '@electricui/protocol-binary-cobs'
-import { HeartbeatConnectionMetadataReporter } from '@electricui/protocol-binary-heartbeats'
 import { SerialPort } from 'serialport'
 import { usb } from 'usb'
 import { USBHintProducer } from '@electricui/transport-node-usb-discovery'
-import { LEDCodec } from './codecs'
-import { CodecDuplexPipelineWithDefaults } from '@electricui/protocol-binary-codecs'
 
 import {
   FramingPipeline,
   ProtocolPipeline,
-  COMMAND_NAMES,
-  MessageMetadata,
-  decode,
-  byteToHexString,
   ReqResQueuePipeline,
+  CodecPipeline,
 } from 'protocol'
 
 const typeCache = new TypeCache()
@@ -70,13 +55,7 @@ const serialTransportFactory = new TransportFactory(
     const framingPipeline = new FramingPipeline()
     const protocolPipeline = new ProtocolPipeline()
     const reqresPipeline = new ReqResQueuePipeline()
-
-    // const codecPipeline = new CodecDuplexPipelineWithDefaults({
-    //   passthroughNoMatch: true,
-    // })
-
-    // // Add custom codecs.
-    // codecPipeline.addCodecs(customCodecs)
+    const codecPipeline = new CodecPipeline()
 
     const connectionStaticMetadata = new ConnectionStaticMetadataReporter({
       name: 'Serial',
@@ -90,6 +69,7 @@ const serialTransportFactory = new TransportFactory(
       framingPipeline,
       protocolPipeline,
       reqresPipeline,
+      codecPipeline,
     ])
     connectionInterface.addMetadataReporters([connectionStaticMetadata])
 

@@ -1,11 +1,4 @@
 import {
-  BinaryPipeline,
-  BinaryTypeCachePipeline,
-  DeliverabilityManagerBinaryProtocol,
-  QueryManagerBinaryProtocol,
-  UndefinedMessageIDGuardPipeline,
-} from '@electricui/protocol-binary'
-import {
   ConnectionInterface,
   ConnectionStaticMetadataReporter,
   DeliverabilityManagerOneShot,
@@ -25,24 +18,16 @@ import {
 } from '@electricui/transport-node-serial'
 import { SerialPort } from 'serialport'
 
-import { BinaryLargePacketHandlerPipeline } from '@electricui/protocol-binary-large-packet-handler'
-import { COBSPipeline } from '@electricui/protocol-binary-cobs'
-import { HeartbeatConnectionMetadataReporter } from '@electricui/protocol-binary-heartbeats'
 import { usb } from 'usb'
 import { USBHintProducer } from '@electricui/transport-node-usb-discovery'
-import { customCodecs } from './codecs'
-import { CodecDuplexPipelineWithDefaults } from '@electricui/protocol-binary-codecs'
 
 import { TypeCache } from '@electricui/core'
 
 import {
   FramingPipeline,
   ProtocolPipeline,
-  COMMAND_NAMES,
-  MessageMetadata,
-  decode,
-  byteToHexString,
   ReqResQueuePipeline,
+  CodecPipeline,
 } from 'protocol'
 
 export const typeCache = new TypeCache()
@@ -81,13 +66,7 @@ export function buildSerialTransportFactory() {
       const framingPipeline = new FramingPipeline()
       const protocolPipeline = new ProtocolPipeline()
       const reqresPipeline = new ReqResQueuePipeline()
-
-      // const codecPipeline = new CodecDuplexPipelineWithDefaults({
-      //   passthroughNoMatch: true,
-      // })
-
-      // // Add custom codecs.
-      // codecPipeline.addCodecs(customCodecs)
+      const codecPipeline = new CodecPipeline()
 
       const connectionStaticMetadata = new ConnectionStaticMetadataReporter({
         name: 'Serial',
@@ -101,6 +80,7 @@ export function buildSerialTransportFactory() {
         framingPipeline,
         protocolPipeline,
         reqresPipeline,
+        codecPipeline,
       ])
       connectionInterface.addMetadataReporters([connectionStaticMetadata])
 

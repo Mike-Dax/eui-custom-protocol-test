@@ -13,6 +13,7 @@ export {
   addressAndCommandToMessageID,
   messageIDToAddressAndCommand,
 } from "./src/common";
+export { CodecPipeline } from './src/codecs'
 export { HintValidatorFirmwareAddressPoll } from './src/hint-validator'
 export { ReqResQueuePipeline } from './src/reqres-pipeline'
 
