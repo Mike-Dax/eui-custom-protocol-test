@@ -9,7 +9,7 @@
   "types": "lib/index.d.ts",
   "dependencies": {
     "@electricui/async-utilities": "0.9.3",
-    "@electricui/core": "0.9.5-5d1573e4a",
+    "@electricui/core": "0.9.5-701de72eb",
     "@electricui/timing": "0.10.2",
     "async-mutex": "^0.4.0",
     "debug": "^4.3.4"

@@ -38,11 +38,11 @@ import {
 import {
   FramingPipeline,
   ProtocolPipeline,
-  COMMAND_NAMES,
+  COMMAND_CHANNELS,
   MessageMetadata,
   decode,
   byteToHexString,
-  addressAndCommandToMessageID,
+  addressAndChannelToMessageID,
 } from 'protocol'
 
 async function keypress(message: string) {
@@ -187,7 +187,7 @@ export const handshake = async (report: StreamReport) => {
   {
     // Try a board ID packet
     const readAllVersions = new Message<number, MessageMetadata>(
-      addressAndCommandToMessageID(0x01, COMMAND_NAMES.CMD_RD_VERSION), // read 0x01 first
+      addressAndChannelToMessageID(0x01, COMMAND_CHANNELS.LAMP_FIRMWARE_VERSION), // read 0x01 first
       0x00,
     )
 
@@ -201,7 +201,7 @@ export const handshake = async (report: StreamReport) => {
       report,
       connection,
       readAllVersions,
-      message => message.metadata.commandName === COMMAND_NAMES.CMD_RD_VERSION,
+      message => message.metadata.channel === COMMAND_CHANNELS.LAMP_FIRMWARE_VERSION,
       boardIDCancellationToken,
       `Sending CMD_RD_VERSION request packet`,
     )

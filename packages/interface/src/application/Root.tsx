@@ -17,7 +17,10 @@ import React, { Suspense } from 'react'
 import { RefreshIndicator } from '@electricui/components-desktop-blueprint'
 import { WrapDeviceContextWithLocation } from './pages/WrapDeviceContextWithLocation'
 import { history } from '@electricui/utility-electron'
-import { StateProvider } from '@electricui/components-core'
+import {
+  StateProvider,
+  DeadlineContextProvider,
+} from '@electricui/components-core'
 
 import { FocusStyleManager } from '@blueprintjs/core'
 FocusStyleManager.onlyShowFocusOnTabs()
@@ -34,19 +37,21 @@ export function Root() {
             <DeviceIDBridgeContext>
               <DarkModeChartThemeProvider>
                 <AcceptableDeviceContinuityProvider>
-                  <LocationProvider history={history}>
-                    <Suspense fallback={<div>Loading...</div>}>
-                      <Router>
-                        <ConnectionPage path="/" />
-                        <WrapDeviceContextWithLocation path="device_loading/:deviceID/">
-                          <DeviceLoadingPage path="/" />
-                        </WrapDeviceContextWithLocation>
-                        <WrapDeviceContextWithLocation path="devices/:deviceID/">
-                          <DevicePages path="*" />
-                        </WrapDeviceContextWithLocation>
-                      </Router>
-                    </Suspense>
-                  </LocationProvider>
+                  <DeadlineContextProvider timeout={50 /* ms */}>
+                    <LocationProvider history={history}>
+                      <Suspense fallback={<div>Loading...</div>}>
+                        <Router>
+                          <ConnectionPage path="/" />
+                          <WrapDeviceContextWithLocation path="device_loading/:deviceID/">
+                            <DeviceLoadingPage path="/" />
+                          </WrapDeviceContextWithLocation>
+                          <WrapDeviceContextWithLocation path="devices/:deviceID/">
+                            <DevicePages path="*" />
+                          </WrapDeviceContextWithLocation>
+                        </Router>
+                      </Suspense>
+                    </LocationProvider>
+                  </DeadlineContextProvider>
                 </AcceptableDeviceContinuityProvider>
               </DarkModeChartThemeProvider>
             </DeviceIDBridgeContext>

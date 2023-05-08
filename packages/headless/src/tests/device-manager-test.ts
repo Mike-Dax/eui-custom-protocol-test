@@ -26,9 +26,8 @@ import { LogMessageName } from 'src/LogMessageName'
 import { deviceManagerFactory } from '../deviceManager/config'
 
 import {
-  messageIDToAddressAndCommand,
-  addressAndCommandToMessageID,
-  COMMAND_NAMES,
+  addressAndChannelToMessageID,
+  COMMAND_CHANNELS,
   byteToHexString,
 } from 'protocol'
 
@@ -128,9 +127,9 @@ export const connectToAnything = async (report: StreamReport) => {
           try {
             const fwVer: number = await query(
               device,
-              addressAndCommandToMessageID(
+              addressAndChannelToMessageID(
                 address,
-                COMMAND_NAMES.CMD_RD_VERSION,
+                COMMAND_CHANNELS.LAMP_FIRMWARE_VERSION,
               ),
               cancellationToken,
             )
@@ -171,9 +170,9 @@ export const connectToAnything = async (report: StreamReport) => {
         for (const address of addresses) {
           const lightStateFirst: number = await query(
             device,
-            addressAndCommandToMessageID(
+            addressAndChannelToMessageID(
               address,
-              COMMAND_NAMES.CMD_PULSE_AMP_RD,
+              COMMAND_CHANNELS.PULSE_INTENSITY_TOP_WHITE,
             ),
             new CancellationToken().deadline(TIME_TO_WAIT_FOR_REPLY),
           )
@@ -188,9 +187,9 @@ export const connectToAnything = async (report: StreamReport) => {
 
           // Turn the light on
           await write(
-            addressAndCommandToMessageID(
+            addressAndChannelToMessageID(
               address,
-              COMMAND_NAMES.CMD_PULSE_AMP_SET,
+              COMMAND_CHANNELS.PULSE_INTENSITY_TOP_WHITE,
             ),
             0x01,
             new CancellationToken().deadline(TIME_TO_WAIT_FOR_REPLY),
@@ -202,9 +201,9 @@ export const connectToAnything = async (report: StreamReport) => {
           // Read back the light state
           const lightStateSecond: number = await query(
             device,
-            addressAndCommandToMessageID(
+            addressAndChannelToMessageID(
               address,
-              COMMAND_NAMES.CMD_PULSE_AMP_RD,
+              COMMAND_CHANNELS.PULSE_INTENSITY_TOP_WHITE,
             ),
             new CancellationToken().deadline(TIME_TO_WAIT_FOR_REPLY),
           )
@@ -219,9 +218,9 @@ export const connectToAnything = async (report: StreamReport) => {
 
           // Turn it off again
           await write(
-            addressAndCommandToMessageID(
+            addressAndChannelToMessageID(
               address,
-              COMMAND_NAMES.CMD_PULSE_AMP_SET,
+              COMMAND_CHANNELS.PULSE_INTENSITY_TOP_WHITE,
             ),
             0x00,
             new CancellationToken().deadline(TIME_TO_WAIT_FOR_REPLY),

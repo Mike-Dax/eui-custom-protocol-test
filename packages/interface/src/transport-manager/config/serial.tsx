@@ -27,7 +27,7 @@ import {
   ProtocolPipeline,
   ReqResQueuePipeline,
   CodecPipeline,
-  AutoQueryPipeline,
+  AbstractionPipeline,
 } from 'protocol'
 
 const typeCache = new TypeCache()
@@ -58,7 +58,7 @@ const serialTransportFactory = new TransportFactory(
     const protocolPipeline = new ProtocolPipeline()
     const reqresPipeline = new ReqResQueuePipeline()
     const codecPipeline = new CodecPipeline()
-    const autoQueryPipeline = new AutoQueryPipeline()
+    const abstractionPipeline = new AbstractionPipeline()
 
     const connectionStaticMetadata = new ConnectionStaticMetadataReporter({
       name: 'Serial',
@@ -74,7 +74,7 @@ const serialTransportFactory = new TransportFactory(
       protocolPipeline,
       reqresPipeline,
       codecPipeline,
-      autoQueryPipeline,
+      abstractionPipeline,
     ])
     connectionInterface.addMetadataReporters([connectionStaticMetadata])
 

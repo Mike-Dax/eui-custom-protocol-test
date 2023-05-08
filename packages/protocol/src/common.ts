@@ -222,6 +222,26 @@ export const COMMAND_NAMES = {
   CMD_ENGR_RD: "CMD_ENGR_RD",
 } as const;
 
+// These are the channels that will be used for the MessageIDs 
+export const COMMAND_CHANNELS = {
+  LAMP_ADDRESS: "LAMP_ADDRESS",
+  PULSE_INTENSITY_BOTTOM_IR: "PULSE_INTENSITY_BOTTOM_IR",
+  PULSE_INTENSITY_TOP_WHITE: "PULSE_INTENSITY_TOP_WHITE",
+  STROBE_PULSE_WIDTH: "STROBE_PULSE_WIDTH",
+  STROBE_PULSE_DELAY: "STROBE_PULSE_DELAY",
+  HEALTH_STATUS: "HEALTH_STATUS",
+  TRIGGER_STROBE: "TRIGGER_STROBE",
+  LAMP_FIRMWARE_VERSION: "LAMP_FIRMWARE_VERSION",
+  JUMP_TO_BOOTLOADER: "JUMP_TO_BOOTLOADER",
+  JUMP_TO_APPLICATION: "JUMP_TO_APPLICATION",
+  CALIBRATION_OFFSET: "CALIBRATION_OFFSET",
+  CALIBRATION_SCALE: "CALIBRATION_SCALE",
+  ENGINEERING_DATA: "ENGINEERING_DATA",
+  OPTIONS: "OPTIONS"
+} as const;
+
+export type COMMAND_CHANNEL = typeof COMMAND_CHANNELS[keyof typeof COMMAND_CHANNELS];
+
 // Have a map to natively store the byte as a key. If we used an object it would be coerced to a string.
 export const COMMAND_BYTE_TO_NAME = new Map<
   number,
@@ -243,30 +263,19 @@ export function byteToHexString(byte: number) {
 }
 
 export interface MessageMetadata extends CoreMessageMetadata {
-  // Address byte, (not the source of truth, the MessageID is)
+  // Address byte
   address: number;
-  // Command name, (not the source of truth, the MessageID is)
+  // Command name
   commandName: COMMAND_NAME;
+  // Channel name
+  channel: COMMAND_CHANNEL;
 }
 
 export interface ProtocolPipelineOptions {
   generateTimestamp?: () => number;
 }
 
-export function addressAndCommandToMessageID(
-  address: number,
-  commandName: COMMAND_NAME
-) {
-  if (!Number.isInteger(address) || address < 0 || address > 255) {
-    throw new Error(
-      `Address must be an integer between 0 and 255, was ${address}`
-    );
-  }
-
-  return `${address}/${commandName}`;
-}
-
-export function messageIDToAddressAndCommand(messageID: string) {
+export function messageIDToAddressAndChannel(messageID: string) {
   try {
     const split = messageID.split("/");
 
@@ -280,20 +289,28 @@ export function messageIDToAddressAndCommand(messageID: string) {
       throw new Error(`Address was not an integer`)
     }
 
-    const commandName = split[1] as COMMAND_NAME
+    const channel = split[1] as COMMAND_CHANNEL
 
     return {
       address: address,
-      commandName: commandName,
+      channel: channel,
     };
   } catch (e) {
     throw new Error(
-      `Failed to deconstruct messageID ${messageID} due to ${e.message}`
+      `Failed to deconstruct messageID ${messageID} due to ${(e as any).message}`
     );
   }
 }
 
-export function broadcastMessageID(command: COMMAND_NAME) {
-  // 0xFF is the br
-  return addressAndCommandToMessageID(BROADCAST_ADDRESS, command);
+export function addressAndChannelToMessageID(
+  address: number,
+  channel: COMMAND_CHANNEL
+) {
+  if (!Number.isInteger(address) || address < 0 || address > 255) {
+    throw new Error(
+      `Address must be an integer between 0 and 255, was ${address}`
+    );
+  }
+
+  return `${address}/${channel}`;
 }

@@ -14,6 +14,7 @@ import {
   ProgressBar,
   FormGroup,
   Tag,
+  ButtonProps,
 } from '@blueprintjs/core'
 import {
   IntervalRequester,
@@ -21,6 +22,9 @@ import {
   useQuery,
   useHardwareState,
   useInterfaceState,
+  useDeadline,
+  useSaveContainer,
+  useAsyncThrow,
 } from '@electricui/components-core'
 import { MessageDataSource } from '@electricui/core-timeseries'
 import React, { useCallback, useState } from 'react'
@@ -28,14 +32,13 @@ import { RouteComponentProps } from '@reach/router'
 import {
   Button,
   NumberInput,
-  SaveButton,
   Slider,
 } from '@electricui/components-desktop-blueprint'
 import {
-  addressAndCommandToMessageID,
+  addressAndChannelToMessageID,
   byteToHexString,
-  COMMAND_NAME,
-  COMMAND_NAMES,
+  COMMAND_CHANNEL,
+  COMMAND_CHANNELS,
 } from 'protocol'
 import { IconNames } from '@blueprintjs/icons'
 import { CancellationToken } from '@electricui/async-utilities'
@@ -63,7 +66,10 @@ function AddressPollAndSelect(props: {
       )
       try {
         const fwVer = await query(
-          addressAndCommandToMessageID(address, COMMAND_NAMES.CMD_RD_VERSION),
+          addressAndChannelToMessageID(
+            address,
+            COMMAND_CHANNELS.LAMP_FIRMWARE_VERSION,
+          ),
           cancellationToken,
         )
 
@@ -121,26 +127,6 @@ function AddressPollAndSelect(props: {
   )
 }
 
-/**
- * This builds a two stage writer which writes optimistically to the UI state,
- * so that interactions are fast, but also sets up a deferred read after the write.
- */
-function optimisticWriterBuilder(
-  state: Record<string, any>,
-  address: number,
-  writeCommand: COMMAND_NAME,
-  readCommand: COMMAND_NAME,
-  data: number,
-) {
-  // This is the actual write
-  state[addressAndCommandToMessageID(address, writeCommand)] = data
-
-  // This optimistically sets the read value, which will become a query
-  // on send. It will be sent after the write, which will then update the UI's
-  // hardware state tree
-  state[addressAndCommandToMessageID(address, readCommand)] = data
-}
-
 function AddressPage(props: { address: number }) {
   return (
     <Card>
@@ -152,20 +138,19 @@ function AddressPage(props: { address: number }) {
       </div>
 
       <SaveContainer>
-        <FormGroup label="Pulse Intensity">
+        <FormGroup label="Pulse Intensity Top White">
           <NumberInput
-            accessor={addressAndCommandToMessageID(
+            accessor={addressAndChannelToMessageID(
               props.address,
-              COMMAND_NAMES.CMD_PULSE_AMP_RD,
+              COMMAND_CHANNELS.PULSE_INTENSITY_TOP_WHITE,
             )}
             writer={(state, value) => {
-              optimisticWriterBuilder(
-                state,
-                props.address,
-                COMMAND_NAMES.CMD_PULSE_AMP_SET,
-                COMMAND_NAMES.CMD_PULSE_AMP_RD,
-                value,
-              )
+              state[
+                addressAndChannelToMessageID(
+                  props.address,
+                  COMMAND_CHANNELS.PULSE_INTENSITY_TOP_WHITE,
+                )
+              ] = value
             }}
             min={0}
             max={100}
@@ -175,18 +160,17 @@ function AddressPage(props: { address: number }) {
 
         <FormGroup label="Pulse Intensity Bottom IR">
           <NumberInput
-            accessor={addressAndCommandToMessageID(
+            accessor={addressAndChannelToMessageID(
               props.address,
-              COMMAND_NAMES.CMD_PULSE_AMP_B_RD,
+              COMMAND_CHANNELS.PULSE_INTENSITY_BOTTOM_IR,
             )}
             writer={(state, value) => {
-              optimisticWriterBuilder(
-                state,
-                props.address,
-                COMMAND_NAMES.CMD_PULSE_AMP_B_SET,
-                COMMAND_NAMES.CMD_PULSE_AMP_B_RD,
-                value,
-              )
+              state[
+                addressAndChannelToMessageID(
+                  props.address,
+                  COMMAND_CHANNELS.PULSE_INTENSITY_BOTTOM_IR,
+                )
+              ] = value
             }}
             min={0}
             max={100}
@@ -194,80 +178,65 @@ function AddressPage(props: { address: number }) {
           />
         </FormGroup>
 
-        <FormGroup label="Pulse Intensity Top White">
-          <NumberInput
-            accessor={addressAndCommandToMessageID(
-              props.address,
-              COMMAND_NAMES.CMD_PULSE_AMP_T_RD,
-            )}
-            writer={(state, value) => {
-              optimisticWriterBuilder(
-                state,
-                props.address,
-                COMMAND_NAMES.CMD_PULSE_AMP_T_SET,
-                COMMAND_NAMES.CMD_PULSE_AMP_T_RD,
-                value,
-              )
+        <FormGroup label="Strobe Pulse Width">
+          <Slider
+            writer={(state, values) => {
+              state[
+                addressAndChannelToMessageID(
+                  props.address,
+                  COMMAND_CHANNELS.STROBE_PULSE_WIDTH,
+                )
+              ] = values.strobe_width
             }}
-            min={0}
-            max={100}
-            rightElement={<Tag>%</Tag>}
-          />
+            min={100}
+            max={500}
+            labelRenderer={val => `${val.toFixed(0)}us`}
+            stepSize={255 / 0xc8}
+            labelStepSize={(255 / 0xc8) * 50}
+          >
+            <Slider.Handle
+              name="strobe_width"
+              accessor={state =>
+                state[
+                  addressAndChannelToMessageID(
+                    props.address,
+                    COMMAND_CHANNELS.STROBE_PULSE_WIDTH,
+                  )
+                ] ?? 100
+              }
+            />
+          </Slider>
         </FormGroup>
 
-<FormGroup label="Strobe Pulse Width">
-  <Slider
-    writer={(state, values) => {
-      optimisticWriterBuilder(
-        state,
-        props.address,
-        COMMAND_NAMES.CMD_STRB_PW_SET,
-        COMMAND_NAMES.CMD_STRB_PW_RD,
-        values.strobe_width,
-      )
-    }}
-    min={100}
-    max={500}
-    labelRenderer={val => `${val.toFixed(0)}us`}
-    stepSize={255 / 0xC8}
-    labelStepSize={255 / 0xC8 * 50}
-  >
-    <Slider.Handle
-      name="strobe_width"
-      accessor={state => state[addressAndCommandToMessageID(
-        props.address,
-        COMMAND_NAMES.CMD_STRB_PW_RD,
-      )] ?? 100}
-    />
-  </Slider>
-</FormGroup>
-
-<FormGroup label="Strobe Pulse Delay">
-  <Slider
-    writer={(state, values) => {
-      optimisticWriterBuilder(
-        state,
-        props.address,
-        COMMAND_NAMES.CMD_STRB_DELAY_SET,
-        COMMAND_NAMES.CMD_STRB_DELAY_RD,
-        values.strobe_delay,
-      )
-    }}
-    min={0}
-    max={65280}
-    labelRenderer={val => `${val}us`}
-    stepSize={255}
-    labelStepSize={255 * 25}
-  >
-    <Slider.Handle
-      name="strobe_delay"
-      accessor={state => state[addressAndCommandToMessageID(
-        props.address,
-        COMMAND_NAMES.CMD_STRB_DELAY_RD,
-      )] ?? 0}
-    />
-  </Slider>
-</FormGroup>
+        <FormGroup label="Strobe Pulse Delay">
+          <Slider
+            writer={(state, values) => {
+              state[
+                addressAndChannelToMessageID(
+                  props.address,
+                  COMMAND_CHANNELS.STROBE_PULSE_DELAY,
+                )
+              ] = values.strobe_delay
+            }}
+            min={0}
+            max={65280}
+            labelRenderer={val => `${val}us`}
+            stepSize={255}
+            labelStepSize={255 * 25}
+          >
+            <Slider.Handle
+              name="strobe_delay"
+              accessor={state =>
+                state[
+                  addressAndChannelToMessageID(
+                    props.address,
+                    COMMAND_CHANNELS.STROBE_PULSE_DELAY,
+                  )
+                ] ?? 0
+              }
+            />
+          </Slider>
+        </FormGroup>
 
         <SaveButton>Save</SaveButton>
       </SaveContainer>
@@ -300,4 +269,23 @@ export const OverviewPage = (props: RouteComponentProps) => {
       </div>
     </React.Fragment>
   )
+}
+
+const SaveButton = (props: ButtonProps & { children: React.ReactNode }) => {
+  const getDeadline = useDeadline()
+  const { save, dirty } = useSaveContainer()
+
+  const saveWithCatch = useCallback(() => {
+    const cancellationToken = getDeadline()
+
+    save(cancellationToken).catch(err => {
+      if (cancellationToken.caused(err)) {
+        // no problem
+      } else {
+        console.error(`Failed to save messages: `, err)
+      }
+    })
+  }, [])
+
+  return <Button {...props} onClick={saveWithCatch} />
 }

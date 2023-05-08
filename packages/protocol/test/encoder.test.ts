@@ -5,12 +5,14 @@ import { ProtocolEncoderPipeline } from "../src/encoder";
 import * as sinon from "sinon";
 import { Message } from "@electricui/core";
 import {
-  addressAndCommandToMessageID,
-  COMMAND_NAMES,
-  COMMAND_NAME_TO_BYTE,
+  addressAndChannelToMessageID,
+  COMMAND_CHANNELS,
+  COMMAND_BYTE_TO_NAME,
   FRAMING_END,
   FRAMING_START,
   MessageMetadata,
+  COMMAND_NAMES,
+  COMMAND_NAME_TO_BYTE,
 } from "../src/common";
 
 function generateEncoderEqualityTest(
@@ -55,19 +57,25 @@ describe("Protocol Encoder", () => {
     "handles a golden packet #1",
     generateEncoderEqualityTest(() => {
       const msg = new Message<number, MessageMetadata>(
-        addressAndCommandToMessageID(0x02, COMMAND_NAMES.CMD_PULSE_AMP_SET),
+        addressAndChannelToMessageID(0x02, COMMAND_CHANNELS.PULSE_INTENSITY_BOTTOM_IR),
         0x88
       );
+      msg.metadata.channel = COMMAND_CHANNELS.PULSE_INTENSITY_BOTTOM_IR
+      msg.metadata.address = 0x02
+      msg.metadata.commandName = COMMAND_NAMES.CMD_PULSE_AMP_B_SET
       return msg;
-    }, [0xfe, 0x02, 0x83, 0x88, 0xfd])
+    }, [FRAMING_START, 0x02,  COMMAND_NAME_TO_BYTE[COMMAND_NAMES.CMD_PULSE_AMP_B_SET], 0x88, FRAMING_END])
   );
   it(
     "handles a golden packet #2",
     generateEncoderEqualityTest(() => {
       const msg = new Message<number, MessageMetadata>(
-        addressAndCommandToMessageID(0x01, COMMAND_NAMES.CMD_RD_VERSION),
+        addressAndChannelToMessageID(0x01, COMMAND_CHANNELS.LAMP_FIRMWARE_VERSION),
         0x00
       );
+      msg.metadata.channel = COMMAND_CHANNELS.LAMP_FIRMWARE_VERSION
+      msg.metadata.address = 0x01
+      msg.metadata.commandName = COMMAND_NAMES.CMD_RD_VERSION
       return msg;
     }, [
       FRAMING_START,

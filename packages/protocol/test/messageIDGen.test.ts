@@ -5,40 +5,36 @@ import { ProtocolEncoderPipeline } from "../src/encoder";
 import * as sinon from "sinon";
 import { Message } from "@electricui/core";
 import {
-  addressAndCommandToMessageID,
-  COMMAND_NAME,
-  COMMAND_NAMES,
-  COMMAND_NAME_TO_BYTE,
-  FRAMING_END,
-  FRAMING_START,
-  messageIDToAddressAndCommand,
-  MessageMetadata,
+  addressAndChannelToMessageID,
+  COMMAND_CHANNEL,
+  COMMAND_CHANNELS,
+  messageIDToAddressAndChannel,
 } from "../src/common";
 
-function generateRoundTrip(inputAddress: number, inputCommand: COMMAND_NAME) {
-  const { address, commandName: command } = messageIDToAddressAndCommand(addressAndCommandToMessageID(inputAddress, inputCommand))
+function generateRoundTrip(inputAddress: number, inputChannel: COMMAND_CHANNEL) {
+  const { address, channel } = messageIDToAddressAndChannel(addressAndChannelToMessageID(inputAddress, inputChannel))
 
   expect(address).toBe(inputAddress)
-  expect(command).toBe(inputCommand)
+  expect(channel).toBe(inputChannel)
 }
 
 describe("MessageID Generation", () => {
   it(
     "can round trip some messageIDs",
     () => {
-      generateRoundTrip(0x00, COMMAND_NAMES.CMD_RD_VERSION)
-      generateRoundTrip(0x01, COMMAND_NAMES.CMD_SET_ADDRESS)
-      generateRoundTrip(0x10, COMMAND_NAMES.CMD_RD_MODE)
-      generateRoundTrip(0x50, COMMAND_NAMES.CMD_JMP_BOOT)
-      generateRoundTrip(0xf0, COMMAND_NAMES.CMD_PULSE_AMP_SET)
-      generateRoundTrip(0xff, COMMAND_NAMES.CMD_TRIGGER_NOW)
+      generateRoundTrip(0x00, COMMAND_CHANNELS.LAMP_FIRMWARE_VERSION)
+      generateRoundTrip(0x01, COMMAND_CHANNELS.LAMP_ADDRESS)
+      generateRoundTrip(0x10, COMMAND_CHANNELS.OPTIONS)
+      generateRoundTrip(0x50, COMMAND_CHANNELS.CALIBRATION_OFFSET)
+      generateRoundTrip(0xf0, COMMAND_CHANNELS.PULSE_INTENSITY_BOTTOM_IR)
+      generateRoundTrip(0xff, COMMAND_CHANNELS.PULSE_INTENSITY_TOP_WHITE)
     }
   );
   it(
     "throws on incorrect address",
     () => {
       expect(() => {
-        addressAndCommandToMessageID(-1, COMMAND_NAMES.CMD_RD_VERSION)
+        addressAndChannelToMessageID(-1, COMMAND_CHANNELS.PULSE_INTENSITY_TOP_WHITE)
       }).toThrow()
     }
   );

@@ -1,21 +1,17 @@
 import { CancellationToken } from '@electricui/async-utilities'
 import { describe, expect, it } from '@jest/globals'
 
-import { ProtocolDecoderPipeline } from '../src/decoder'
-import * as sinon from 'sinon'
 import { Message, PipelinePromise } from '@electricui/core'
 import {
-  addressAndCommandToMessageID,
-  COMMAND_NAME,
-  COMMAND_NAMES,
-  COMMAND_NAME_TO_BYTE,
-  FRAMING_END,
-  FRAMING_START,
+  addressAndChannelToMessageID,
+  COMMAND_CHANNEL,
+  COMMAND_CHANNELS,
   MessageMetadata,
 } from '../src/common'
 
 import { ReqResQueuePipeline } from '../src/reqres-pipeline'
 import { CallbackSink } from './common'
+import { commandChannelToReadCommand } from '../src/abstraction'
 
 describe('Request Resolve pipeline', () => {
   it('can send write requests one after another', async () => {
@@ -27,7 +23,7 @@ describe('Request Resolve pipeline', () => {
     let i = 0
     const sendIncrementingDataMessage = () => {
       const msg = new Message<number, MessageMetadata>(
-        addressAndCommandToMessageID(0x53, COMMAND_NAMES.CMD_STRB_PW_SET),
+        addressAndChannelToMessageID(0x53, COMMAND_CHANNELS.STROBE_PULSE_WIDTH),
         i++,
       )
 
@@ -51,7 +47,7 @@ describe('Request Resolve pipeline', () => {
 
         // If it receives a request, reply to it
         reply(
-          generateMessage(0x00, COMMAND_NAMES.CMD_RD_VERSION, i++, false),
+          generateMessage(0x00, COMMAND_CHANNELS.LAMP_FIRMWARE_VERSION, i++, false),
           cancellationToken,
         )
       })
@@ -59,7 +55,7 @@ describe('Request Resolve pipeline', () => {
     const sendIncrementingQuery = () => {
       const msg = generateMessage(
         0x01,
-        COMMAND_NAMES.CMD_RD_VERSION,
+        COMMAND_CHANNELS.LAMP_FIRMWARE_VERSION,
         0x00,
         true,
       )
@@ -95,7 +91,7 @@ describe('Request Resolve pipeline', () => {
 
         // If it receives a request, reply to it
         reply(
-          generateMessage(0x00, COMMAND_NAMES.CMD_RD_VERSION, i++, false),
+          generateMessage(0x00, COMMAND_CHANNELS.LAMP_FIRMWARE_VERSION, i++, false),
           cancellationToken,
         )
       })
@@ -103,7 +99,7 @@ describe('Request Resolve pipeline', () => {
     const sendIncrementingQuery = () => {
       const msg = generateMessage(
         0x01,
-        COMMAND_NAMES.CMD_RD_VERSION,
+        COMMAND_CHANNELS.LAMP_FIRMWARE_VERSION,
         0x00,
         true,
       )
@@ -145,7 +141,7 @@ describe('Request Resolve pipeline', () => {
 
         // If it receives a request, reply to it
         return reply(
-          generateMessage(0x00, COMMAND_NAMES.CMD_RD_VERSION, i++, false),
+          generateMessage(0x00, COMMAND_CHANNELS.LAMP_FIRMWARE_VERSION, i++, false),
           cancellationToken,
         )
       })
@@ -153,7 +149,7 @@ describe('Request Resolve pipeline', () => {
     const sendIncrementingQuery = () => {
       const msg = generateMessage(
         0x01,
-        COMMAND_NAMES.CMD_RD_VERSION,
+        COMMAND_CHANNELS.LAMP_FIRMWARE_VERSION,
         0x00,
         true,
       )
@@ -198,17 +194,18 @@ function sleep(duration: number) {
 
 function generateMessage(
   address: number,
-  command: COMMAND_NAME,
+  channel: COMMAND_CHANNEL,
   payload: number,
   query?: boolean,
 ) {
   const msg = new Message<number, MessageMetadata>(
     // Address is 0x01
-    addressAndCommandToMessageID(address, command),
+    addressAndChannelToMessageID(address, channel),
     payload,
   )
   msg.metadata.address = address
-  msg.metadata.commandName = command
+  msg.metadata.channel = channel
+  msg.metadata.commandName = commandChannelToReadCommand[channel as keyof typeof commandChannelToReadCommand]!
 
   // Need to set the query otherwise the pipeline won't detect it's a query
   msg.metadata.query = Boolean(query)

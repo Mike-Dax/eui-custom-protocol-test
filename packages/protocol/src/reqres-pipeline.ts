@@ -5,11 +5,13 @@ import { timing } from '@electricui/timing'
 
 import { Mutex } from 'async-mutex'
 import {
-  addressAndCommandToMessageID,
+  addressAndChannelToMessageID,
+  COMMAND_CHANNEL,
+  COMMAND_CHANNELS,
   COMMAND_NAME,
   COMMAND_NAMES,
   COMMAND_NAME_TO_BYTE,
-  messageIDToAddressAndCommand,
+  messageIDToAddressAndChannel,
   MessageMetadata,
 } from './common'
 
@@ -27,19 +29,14 @@ export class RequestResponseEncoderPipeline extends Pipeline {
     super()
   }
 
-  async receive(message: Message, cancellationToken: CancellationToken) {
+  async receive(message: Message<number, MessageMetadata>, cancellationToken: CancellationToken) {
     // Non query packets are passed straight through, immediately resolving, without taking a mutex
     if (!message.metadata.query) {
       return this.push(message, cancellationToken)
     }
 
-    // Extract the command name and address and annotate the mutex with it
-    const { commandName, address } = messageIDToAddressAndCommand(
-      message.messageID,
-    )
-
     // Broadcast packets will never be replied to, send the command but don't bother with the mutex.
-    if (address === 0xff) {
+    if (message.metadata.address === 0xff) {
       return this.push(message, cancellationToken)
     }
 
@@ -54,8 +51,8 @@ export class RequestResponseEncoderPipeline extends Pipeline {
       // If it has already timed out, immediately reject, don't send the message
       cancellationToken.haltIfCancelled()
 
-      this.mutexWithMetadata.commandName = commandName
-      this.mutexWithMetadata.address = address
+      this.mutexWithMetadata.channel = message.metadata.channel
+      this.mutexWithMetadata.address = message.metadata.address
 
       // Send the query packet, wait for the response from the other pipeline
       const write = this.push(message, cancellationToken)
@@ -84,14 +81,14 @@ export class RequestResponseDecoderPipeline extends Pipeline {
   ) {
     // Check if this is a reply to something we're waiting for
     if (this.mutexWithMetadata.mutex.isLocked()) {
-      if (this.mutexWithMetadata.commandName === message.metadata.commandName) {
+      if (this.mutexWithMetadata.channel === message.metadata.channel) {
         // Annotate the incoming packet with the address it was from,
         // since it's current address is 0x00, the master
         // and also annotate the messageID to include the new address
         message.metadata.address = this.mutexWithMetadata.address
-        message.messageID = addressAndCommandToMessageID(
+        message.messageID = addressAndChannelToMessageID(
           this.mutexWithMetadata.address,
-          this.mutexWithMetadata.commandName,
+          this.mutexWithMetadata.channel,
         )
 
         // release the lock
@@ -110,7 +107,7 @@ export class RequestResponseDecoderPipeline extends Pipeline {
 type MutexWithMetadata = {
   mutex: Mutex
   deferred: Deferred<void>
-  commandName: COMMAND_NAME
+  channel: COMMAND_CHANNEL
   address: number
 }
 
@@ -123,7 +120,7 @@ export class ReqResQueuePipeline extends DuplexPipeline {
     const mutexWithMetadata: MutexWithMetadata = {
       mutex: new Mutex(),
       deferred: new Deferred(),
-      commandName: COMMAND_NAMES.CMD_RD_VERSION, // just needs to be set to a valid one initially
+      channel: COMMAND_CHANNELS.LAMP_FIRMWARE_VERSION, // just needs to be set to a valid one initially
       address: 0xff,
     }
 

@@ -5,7 +5,9 @@ import { ProtocolDecoderPipeline } from "../src/decoder";
 import * as sinon from "sinon";
 import { Message } from "@electricui/core";
 import {
-  addressAndCommandToMessageID,
+  addressAndChannelToMessageID,
+  COMMAND_CHANNEL,
+  COMMAND_CHANNELS,
   COMMAND_NAME,
   COMMAND_NAMES,
   COMMAND_NAME_TO_BYTE,
@@ -16,9 +18,10 @@ import {
 
 function generateDecoderEqualityTest(
   testCase: Buffer,
-  commandName: COMMAND_NAME,
+  channel: COMMAND_CHANNEL,
   address: number,
-  messagePayload: number
+  messagePayload: number,
+  commandName: COMMAND_NAME,
 ) {
   return async () => {
     const spy = sinon.spy();
@@ -38,9 +41,10 @@ function generateDecoderEqualityTest(
       spy.getCall(0).args[0];
 
     expect(receivedMessage).toBeTruthy();
-    expect(receivedMessage.messageID).toBe(addressAndCommandToMessageID(address, commandName));
+    expect(receivedMessage.messageID).toBe(addressAndChannelToMessageID(address, channel));
     expect(receivedMessage.payload).toBe(messagePayload);
     expect(receivedMessage.metadata.address).toBe(address);
+    expect(receivedMessage.metadata.channel).toBe(channel);
     expect(receivedMessage.metadata.commandName).toBe(commandName);
 
     // The decoder should be called as many times as there are reference calls
@@ -52,10 +56,11 @@ describe("Protocol Decoder", () => {
   it(
     "handles a golden packet #1",
     generateDecoderEqualityTest(
-      Buffer.from([0xfe, 0x02, 0x83, 0x88, 0xfd]),
-      COMMAND_NAMES.CMD_PULSE_AMP_SET,
+      Buffer.from([0xfe, 0x02, 0x53, 0x88, 0xfd]),
+      COMMAND_CHANNELS.PULSE_INTENSITY_BOTTOM_IR,
       0x02,
-      0x88
+      0x88,
+      COMMAND_NAMES.CMD_PULSE_AMP_B_RD
     )
   );
   it(
@@ -68,9 +73,10 @@ describe("Protocol Decoder", () => {
         0x1d,
         FRAMING_END,
       ]),
-      COMMAND_NAMES.CMD_RD_VERSION,
+      COMMAND_CHANNELS.LAMP_FIRMWARE_VERSION,
       0x02,
-      0x1d
+      0x1d,
+      COMMAND_NAMES.CMD_RD_VERSION
     )
   );
 });

@@ -1,5 +1,10 @@
 import { Message, Pipeline, DuplexPipeline } from '@electricui/core'
-import { COMMAND_NAME, COMMAND_NAMES, messageIDToAddressAndCommand, MessageMetadata } from './common'
+import {
+  COMMAND_CHANNEL,
+  COMMAND_CHANNELS,
+  messageIDToAddressAndChannel,
+  MessageMetadata,
+} from './common'
 import { CancellationToken } from '@electricui/async-utilities'
 
 function map(
@@ -8,11 +13,11 @@ function map(
   inMax: number,
   outMin: number,
   outMax: number,
-  commandName: COMMAND_NAME,
+  channel: COMMAND_CHANNEL,
 ) {
   if (x < inMin || x > inMax) {
     throw new Error(
-      `Incorrect data for ${commandName}, must be between ${inMin} and ${inMax}`,
+      `Incorrect data for ${channel}, must be between ${inMin} and ${inMax}`,
     )
   }
 
@@ -22,82 +27,86 @@ function map(
   return Math.round(mapped)
 }
 
-export function encodeData(commandName: COMMAND_NAME, data: number) {
-  switch (commandName) {
-    case COMMAND_NAMES.CMD_SET_ADDRESS:
-      return map(data, 1, 252, 0x01, 0xfc, commandName)
+export function encodeData(channel: COMMAND_CHANNEL, data: number) {
+  switch (channel) {
+    case COMMAND_CHANNELS.LAMP_ADDRESS:
+      return map(data, 1, 252, 0x01, 0xfc, channel)
 
-    case COMMAND_NAMES.CMD_PULSE_AMP_SET:
-      return map(data, 0, 100, 0x00, 0xff, commandName)
+    case COMMAND_CHANNELS.PULSE_INTENSITY_BOTTOM_IR:
+      return map(data, 0, 100, 0x00, 0xff, channel)
 
-    case COMMAND_NAMES.CMD_PULSE_AMP_B_SET:
-      return map(data, 0, 100, 0x00, 0xff, commandName)
-
-    case COMMAND_NAMES.CMD_PULSE_AMP_T_SET:
+    case COMMAND_CHANNELS.PULSE_INTENSITY_TOP_WHITE:
       // Note: this goes from 0x00 to 0x1f
-      return map(data, 0, 100, 0x00, 0x1f, commandName)
+      return map(data, 0, 100, 0x00, 0x1f, channel)
 
-    case COMMAND_NAMES.CMD_STRB_PW_SET:
-      return map(data, 100, 500, 0x32, 0xfa, commandName)
+    case COMMAND_CHANNELS.STROBE_PULSE_WIDTH:
+      return map(data, 100, 500, 0x32, 0xfa, channel)
 
-    case COMMAND_NAMES.CMD_STRB_DELAY_SET:
-      return map(data, 0, 65280, 0x00, 0xff, commandName)
+    case COMMAND_CHANNELS.STROBE_PULSE_DELAY:
+      return map(data, 0, 65280, 0x00, 0xff, channel)
 
-    case COMMAND_NAMES.CMD_SET_MODE:
-      return map(data, 0x00, 0x26, 0x00, 0x26, commandName)
+    case COMMAND_CHANNELS.OPTIONS:
+      // TODO: Bitfield this
+      return map(data, 0x00, 0x26, 0x00, 0x26, channel)
 
     default:
-      return map(data, 0x00, 0xff, 0x00, 0xff, commandName)
+      return map(data, 0x00, 0xff, 0x00, 0xff, channel)
   }
 }
 
-export function decodeData(commandName: COMMAND_NAME, data: number) {
-  switch (commandName) {
-    case COMMAND_NAMES.CMD_PULSE_AMP_RD:
-      return map(data, 0x00, 0xff, 0, 100, commandName)
+export function decodeData(channel: COMMAND_CHANNEL, data: number) {
+  switch (channel) {
+    case COMMAND_CHANNELS.PULSE_INTENSITY_BOTTOM_IR:
+      return map(data, 0x00, 0xff, 0, 100, channel)
 
-    case COMMAND_NAMES.CMD_PULSE_AMP_B_RD:
-      return map(data, 0x00, 0xff, 0, 100, commandName)
+    case COMMAND_CHANNELS.PULSE_INTENSITY_TOP_WHITE:
+      return map(data, 0x00, 0x1f, 0, 100, channel)
 
-    case COMMAND_NAMES.CMD_PULSE_AMP_T_RD:
-      return map(data, 0x00, 0x1f, 0, 100, commandName)
+    case COMMAND_CHANNELS.STROBE_PULSE_WIDTH:
+      return map(data, 0x32, 0xfa, 100, 500, channel)
 
-    case COMMAND_NAMES.CMD_PULSE_AMP_TB_RD:
-      throw new Error(`CMD_PULSE_AMP_TB_RD has 6 bytes, so this'll never pass the framing pipeline`)
-
-    case COMMAND_NAMES.CMD_STRB_PW_RD:
-      return map(data, 0x32, 0xfa, 100, 500, commandName)
-
-    case COMMAND_NAMES.CMD_STRB_DELAY_RD:
-      return map(data, 0x00, 0xff, 0, 65280, commandName)
+    case COMMAND_CHANNELS.STROBE_PULSE_DELAY:
+      return map(data, 0x00, 0xff, 0, 65280, channel)
 
     default:
-      return map(data, 0x00, 0xff, 0x00, 0xff, commandName)
+      return map(data, 0x00, 0xff, 0x00, 0xff, channel)
   }
 }
 
 export class CodecEncoderPipeline extends Pipeline {
   receive(
     message: Message<number, MessageMetadata>,
-    cancellationToken: CancellationToken
+    cancellationToken: CancellationToken,
   ) {
-    const { commandName } = messageIDToAddressAndCommand(message.messageID)
-    const encoded = encodeData(commandName, message.payload ?? 0x00);
-    // Mutate the payload
-    message.payload = encoded
+    if (message.metadata.query) {
+      // Queries always have empty payloads
+      message.payload = 0x00
+    } else {
+      const encoded = encodeData(
+        message.metadata.channel,
+        message.payload ?? 0x00,
+      )
 
-    return this.push(message, cancellationToken);
+      // Mutate the payload
+      message.payload = encoded
+    }
+
+    return this.push(message, cancellationToken)
   }
 }
 
 export class CodecDecoderPipeline extends Pipeline {
-  receive(message: Message, cancellationToken: CancellationToken) {
-    const { commandName } = messageIDToAddressAndCommand(message.messageID)
-
-    const decoded = decodeData(commandName, message.payload);
+  receive(
+    message: Message<number, MessageMetadata>,
+    cancellationToken: CancellationToken,
+  ) {
+    const decoded = decodeData(
+      message.metadata.channel,
+      message.payload ?? 0x00,
+    )
     message.payload = decoded
 
-    return this.push(message, cancellationToken);
+    return this.push(message, cancellationToken)
   }
 }
 

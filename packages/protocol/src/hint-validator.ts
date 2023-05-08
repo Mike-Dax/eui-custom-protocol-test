@@ -11,8 +11,8 @@ import { CancellationToken } from '@electricui/async-utilities'
 
 import debug from 'debug'
 import {
-  addressAndCommandToMessageID,
-  COMMAND_NAMES,
+  addressAndChannelToMessageID,
+  COMMAND_CHANNELS,
   MessageMetadata,
 } from './common'
 
@@ -54,24 +54,22 @@ export class HintValidatorFirmwareAddressPoll extends DiscoveryHintValidator {
       .waitForReply<number>((replyMessage: Message) => {
         return (
           replyMessage.messageID ===
-          addressAndCommandToMessageID(address, COMMAND_NAMES.CMD_RD_VERSION)
+          addressAndChannelToMessageID(address, COMMAND_CHANNELS.LAMP_FIRMWARE_VERSION)
         )
       }, cancellationToken)
       .then(res => {
         console.log(`received response`)
-        this.receivedResponse(res.payload, address)
+        this.receivedResponse(res.payload!, address)
       })
 
       .catch(e => {})
 
     // Request the board identifier
     const request = new Message<number, MessageMetadata>(
-      addressAndCommandToMessageID(address, COMMAND_NAMES.CMD_RD_VERSION),
+      addressAndChannelToMessageID(address, COMMAND_CHANNELS.LAMP_FIRMWARE_VERSION),
       0x00,
     )
     request.metadata.query = true
-    request.metadata.address = address
-    request.metadata.commandName = COMMAND_NAMES.CMD_RD_VERSION
 
     await this.connection.write(request, cancellationToken).catch(e => {})
 

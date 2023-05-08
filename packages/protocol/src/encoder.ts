@@ -11,15 +11,14 @@ import {
   FRAMING_START,
   FRAMING_END,
   ProtocolPipelineOptions,
-  messageIDToAddressAndCommand,
+  messageIDToAddressAndChannel,
 } from "./common";
 
 const debug = d("protocol:encoder");
 
 export function encode(message: Message<number, MessageMetadata>) {
-  const {address: packetAddress, commandName: commandName} = messageIDToAddressAndCommand(message.messageID)
-
-  const packetCommand = COMMAND_NAME_TO_BYTE[commandName];
+  const packetAddress = message.metadata.address
+  const packetCommand = COMMAND_NAME_TO_BYTE[message.metadata.commandName];
 
   if (packetCommand === undefined) {
     throw new Error(`Unknown packet command: ${message.messageID}`);

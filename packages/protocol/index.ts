@@ -7,15 +7,16 @@ export {
   FramingPipeline,
 } from "./src/framing";
 export {
-  COMMAND_NAMES,
+  COMMAND_CHANNELS,
+  COMMAND_CHANNEL,
   MessageMetadata,
   byteToHexString,
-  addressAndCommandToMessageID,
-  messageIDToAddressAndCommand,
+  addressAndChannelToMessageID,
+  messageIDToAddressAndChannel,
 } from "./src/common";
 export { CodecPipeline } from './src/codecs'
 export { HintValidatorFirmwareAddressPoll } from './src/hint-validator'
 export { ReqResQueuePipeline } from './src/reqres-pipeline'
-export { AutoQueryPipeline } from './src/auto-query'
+export { AbstractionPipeline } from './src/abstraction'
 
 export type { COMMAND_NAME } from "./src/common";
