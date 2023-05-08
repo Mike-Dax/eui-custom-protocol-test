@@ -63,8 +63,7 @@ export function decodeData(commandName: COMMAND_NAME, data: number) {
       return map(data, 0x00, 0x1f, 0, 100, commandName)
 
     case COMMAND_NAMES.CMD_PULSE_AMP_TB_RD:
-      // Note: Unsure of this range
-      return map(data, 0x00, 0x1f, 0, 100, commandName)
+      throw new Error(`CMD_PULSE_AMP_TB_RD has 6 bytes, so this'll never pass the framing pipeline`)
 
     case COMMAND_NAMES.CMD_STRB_PW_RD:
       return map(data, 0x32, 0xfa, 100, 500, commandName)
