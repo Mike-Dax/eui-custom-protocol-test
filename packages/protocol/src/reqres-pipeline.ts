@@ -28,13 +28,23 @@ export class RequestResponseEncoderPipeline extends Pipeline {
   }
 
   async receive(message: Message, cancellationToken: CancellationToken) {
-    // Grab a lock, then send the packet
-    await this.mutexWithMetadata.mutex.runExclusive(() => {
-      // Non query packets are passed straight through, immediately resolving
-      if (!message.metadata.query) {
-        return this.push(message, cancellationToken)
-      }
+    // Non query packets are passed straight through, immediately resolving, without taking a mutex
+    if (!message.metadata.query) {
+      return this.push(message, cancellationToken)
+    }
 
+    // Extract the command name and address and annotate the mutex with it
+    const { commandName, address } = messageIDToAddressAndCommand(
+      message.messageID,
+    )
+
+    // Broadcast packets will never be replied to, send the command but don't bother with the mutex.
+    if (address === 0xff) {
+      return this.push(message, cancellationToken)
+    }
+
+    // Queries need to grab a lock, then send the packet
+    await this.mutexWithMetadata.mutex.runExclusive(() => {
       // This will be resolved by the other pipeline
       this.mutexWithMetadata.deferred = new Deferred()
 
@@ -44,10 +54,6 @@ export class RequestResponseEncoderPipeline extends Pipeline {
       // If it has already timed out, immediately reject, don't send the message
       cancellationToken.haltIfCancelled()
 
-      // Extract the command name and address and annotate the mutex with it
-      const { commandName, address } = messageIDToAddressAndCommand(
-        message.messageID,
-      )
       this.mutexWithMetadata.commandName = commandName
       this.mutexWithMetadata.address = address
 
@@ -58,7 +64,12 @@ export class RequestResponseEncoderPipeline extends Pipeline {
       return Promise.all([write, this.mutexWithMetadata.deferred.promise]).then(
         () => void 0,
       )
-    })
+    }) // Queries are a lower weight than writes, and therefore happen after during a race
+  }
+
+  // Wipe all mutexes on disconnect
+  onDisconnecting() {
+    this.mutexWithMetadata.mutex.cancel()
   }
 }
 
