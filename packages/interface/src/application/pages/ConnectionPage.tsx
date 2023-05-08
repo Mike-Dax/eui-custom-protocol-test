@@ -4,17 +4,21 @@ import { RouteComponentProps } from '@reach/router'
 import { Connections } from '@electricui/components-desktop-blueprint'
 import { Logo } from '../components/Logo'
 import { navigate } from '@electricui/utility-electron'
-import { useDeviceMetadataKey } from '@electricui/components-core'
+import { useConnectionMetadata, useDeviceConnectionHashes, useDeviceMetadataKey } from '@electricui/components-core'
 import React from 'react'
 
 const CardInternals = () => {
-  const metadataName = useDeviceMetadataKey('name') ?? 'No name'
+  const connectionHashes = useDeviceConnectionHashes()
+  const connectionMetadata = useConnectionMetadata(connectionHashes[0])
+
+  if (!connectionMetadata?.comPath) {
+    return <>Device Not Connected</>
+  }
 
   return (
-    <React.Fragment>
-      <h3 className={Classes.HEADING}>{metadataName}</h3>
-      <p>Device information!</p>
-    </React.Fragment>
+    <>
+      Device on <pre>{connectionMetadata?.comPath ?? 'not connected yet'}</pre>
+    </>
   )
 }
 
@@ -25,7 +29,7 @@ export const ConnectionPage = (props: RouteComponentProps) => {
         <Logo />
 
         <Connections
-          preConnect={deviceID => navigate(`/device_loading/${deviceID}`)}
+          preConnect={deviceID => {}}
           postHandshake={deviceID => navigate(`/devices/${deviceID}`)}
           onFailure={(deviceID, err) => {
             console.log('Connections component got error', err, deviceID)

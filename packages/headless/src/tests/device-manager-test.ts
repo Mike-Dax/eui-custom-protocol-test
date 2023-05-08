@@ -20,9 +20,19 @@ import {
   Report,
   StreamReport,
   sleep,
+  startDeviceSession,
 } from '@electricui/script-utilities'
 import { LogMessageName } from 'src/LogMessageName'
 import { deviceManagerFactory } from '../deviceManager/config'
+
+import {
+  messageIDToAddressAndCommand,
+  addressAndCommandToMessageID,
+  COMMAND_NAMES,
+  byteToHexString,
+} from 'protocol'
+
+const TIME_TO_WAIT_FOR_REPLY = 20 // ms
 
 async function findDevice(
   deviceManager: DeviceManager,
@@ -42,7 +52,6 @@ async function findDevice(
     `Searching for device...`,
     { wipeForgettableOnComplete: true, singleLineOnComplete: `Found device` },
     async () => {
-
       const foundDevice: Device = await new Promise(async (resolve, reject) => {
         const getDevice = (deviceID: DeviceID) => {
           console.log(`found device called!`)
@@ -85,18 +94,194 @@ export const connectToAnything = async (report: StreamReport) => {
   // We want metadata reporting
   device.setMaintainMetadataReporting(true)
 
-  // Attempt connection
-  await report.startTimerPromise(
-    `Connecting to device...`,
-    {
-      wipeForgettableOnComplete: true,
-      singleLineOnComplete: `Connected to device`,
-    },
-    async () => {
-      const cancellationToken = new CancellationToken().deadline(1_000)
-      await device.addUsageRequest(USAGE_REQUEST, cancellationToken)
-    },
-  )
+  await startDeviceSession(device, async methods => {
+    const { write, resetCancellationToken, connect, disconnect } = methods
+
+    // Attempt connection
+    await report.startTimerPromise(
+      `Connecting to device...`,
+      {
+        wipeForgettableOnComplete: true,
+        singleLineOnComplete: `Connected to device`,
+      },
+      async () => {
+        await connect(new CancellationToken().deadline(1_000))
+      },
+    )
+
+    const addresses: number[] = []
+
+    // Turn the light on and off again
+    await report.startTimerPromise(
+      `Find addresses`,
+      {
+        wipeForgettableOnComplete: true,
+        singleLineOnComplete: `Found addresses`,
+      },
+      async () => {
+        // Poll each address
+
+        for (let address = 0x01; address < 0xfe; address++) {
+          const cancellationToken = new CancellationToken().deadline(
+            TIME_TO_WAIT_FOR_REPLY,
+          )
+          try {
+            const fwVer: number = await query(
+              device,
+              addressAndCommandToMessageID(
+                address,
+                COMMAND_NAMES.CMD_RD_VERSION,
+              ),
+              cancellationToken,
+            )
+
+            report.reportInfo(
+              LogMessageName.UNNAMED,
+              `Address ${byteToHexString(
+                address,
+              )} responded with version: ${byteToHexString(fwVer)}`,
+            )
+
+            // Add it to the list
+            addresses.push(address)
+          } catch (err) {
+            if (cancellationToken.caused(err)) {
+              // move on
+              continue
+            } else {
+              console.error(err)
+              throw new Error(
+                `Failed to poll for available addresses due to above error`,
+              )
+            }
+          }
+        }
+      },
+    )
+
+    // Turn the light on and off again
+    await report.startTimerPromise(
+      `Turning the light on and off again...`,
+      {
+        wipeForgettableOnComplete: true,
+        singleLineOnComplete: `Toggled the light`,
+      },
+      async () => {
+        // For every light
+        for (const address of addresses) {
+          const lightStateFirst: number = await query(
+            device,
+            addressAndCommandToMessageID(
+              address,
+              COMMAND_NAMES.CMD_PULSE_AMP_RD,
+            ),
+            new CancellationToken().deadline(TIME_TO_WAIT_FOR_REPLY),
+          )
+          report.reportInfo(
+            LogMessageName.UNNAMED,
+            `Light state for address ${byteToHexString(
+              address,
+            )} is currently: ${byteToHexString(
+              lightStateFirst,
+            )}, switching it on`,
+          )
+
+          // Turn the light on
+          await write(
+            addressAndCommandToMessageID(
+              address,
+              COMMAND_NAMES.CMD_PULSE_AMP_SET,
+            ),
+            0x01,
+            new CancellationToken().deadline(TIME_TO_WAIT_FOR_REPLY),
+          )
+
+          // Wait a while
+          await sleep(1000)
+
+          // Read back the light state
+          const lightStateSecond: number = await query(
+            device,
+            addressAndCommandToMessageID(
+              address,
+              COMMAND_NAMES.CMD_PULSE_AMP_RD,
+            ),
+            new CancellationToken().deadline(TIME_TO_WAIT_FOR_REPLY),
+          )
+          report.reportInfo(
+            LogMessageName.UNNAMED,
+            `Light state for address ${byteToHexString(
+              address,
+            )} is currently: ${byteToHexString(
+              lightStateSecond,
+            )}, switching it off`,
+          )
+
+          // Turn it off again
+          await write(
+            addressAndCommandToMessageID(
+              address,
+              COMMAND_NAMES.CMD_PULSE_AMP_SET,
+            ),
+            0x00,
+            new CancellationToken().deadline(TIME_TO_WAIT_FOR_REPLY),
+          )
+
+          // Wait a while
+          await sleep(1000)
+
+        }
+      },
+    )
+
+    // Disconnect from the device
+    await disconnect()
+  })
 
   report.reportSuccess(LogMessageName.UNNAMED, `Tests complete`)
+}
+
+async function query<T>(
+  device: Device,
+  messageID: string,
+  cancellationToken: CancellationToken,
+) {
+  let response: T | null = null
+
+  // Wait for a reply with the same messageID
+  const waitForReply = device
+    .waitForReply<T>(
+      message => message.messageID === messageID,
+      cancellationToken,
+    )
+    .then(res => {
+      response = res.payload
+    })
+    .catch(err => {
+      if (cancellationToken.caused(err)) {
+        // no problem
+      } else {
+        throw err
+      }
+    })
+
+  // Create the query
+  const message = new Message(messageID as string, null)
+  message.metadata.query = true
+
+  // Write
+  await device.write(message, cancellationToken).catch(err => {
+    if (cancellationToken.caused(err)) {
+      // no problem
+    } else {
+      throw err
+    }
+  })
+
+  await waitForReply
+
+  cancellationToken.haltIfCancelled()
+
+  // Return the payload
+  return response!
 }

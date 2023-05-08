@@ -28,6 +28,7 @@ import {
   ProtocolPipeline,
   ReqResQueuePipeline,
   CodecPipeline,
+  AutoQueryPipeline,
 } from 'protocol'
 
 export const typeCache = new TypeCache()
@@ -67,6 +68,7 @@ export function buildSerialTransportFactory() {
       const protocolPipeline = new ProtocolPipeline()
       const reqresPipeline = new ReqResQueuePipeline()
       const codecPipeline = new CodecPipeline()
+      const autoQueryPipeline = new AutoQueryPipeline()
 
       const connectionStaticMetadata = new ConnectionStaticMetadataReporter({
         name: 'Serial',
@@ -81,6 +83,7 @@ export function buildSerialTransportFactory() {
         protocolPipeline,
         reqresPipeline,
         codecPipeline,
+        autoQueryPipeline,
       ])
       connectionInterface.addMetadataReporters([connectionStaticMetadata])
 

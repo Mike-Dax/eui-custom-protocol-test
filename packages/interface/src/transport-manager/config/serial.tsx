@@ -1,6 +1,7 @@
 import {
   ConnectionInterface,
   ConnectionStaticMetadataReporter,
+  CONNECTION_EVENTS,
   DeliverabilityManagerOneShot,
   DiscoveryHintConsumer,
   Hint,
@@ -26,6 +27,7 @@ import {
   ProtocolPipeline,
   ReqResQueuePipeline,
   CodecPipeline,
+  AutoQueryPipeline,
 } from 'protocol'
 
 const typeCache = new TypeCache()
@@ -56,10 +58,12 @@ const serialTransportFactory = new TransportFactory(
     const protocolPipeline = new ProtocolPipeline()
     const reqresPipeline = new ReqResQueuePipeline()
     const codecPipeline = new CodecPipeline()
+    const autoQueryPipeline = new AutoQueryPipeline()
 
     const connectionStaticMetadata = new ConnectionStaticMetadataReporter({
       name: 'Serial',
       baudRate: options.baudRate,
+      comPath: options.path,
     })
 
     connectionInterface.setTransport(transport)
@@ -70,6 +74,7 @@ const serialTransportFactory = new TransportFactory(
       protocolPipeline,
       reqresPipeline,
       codecPipeline,
+      autoQueryPipeline,
     ])
     connectionInterface.addMetadataReporters([connectionStaticMetadata])
 
