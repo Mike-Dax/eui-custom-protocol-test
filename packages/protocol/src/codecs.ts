@@ -19,7 +19,7 @@ function map(
   const mapped = ((x - inMin) * (outMax - outMin)) / (inMax - inMin) + outMin
 
   // Return an integer
-  return Math.floor(mapped)
+  return Math.round(mapped)
 }
 
 export function encodeData(commandName: COMMAND_NAME, data: number) {
