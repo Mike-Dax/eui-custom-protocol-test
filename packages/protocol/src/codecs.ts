@@ -82,14 +82,10 @@ export class CodecEncoderPipeline extends Pipeline {
     message: Message<number, MessageMetadata>,
     cancellationToken: CancellationToken
   ) {
-    const { commandName, address } = messageIDToAddressAndCommand(message.messageID)
+    const { commandName } = messageIDToAddressAndCommand(message.messageID)
     const encoded = encodeData(commandName, message.payload ?? 0x00);
-    
+    // Mutate the payload
     message.payload = encoded
-    // This is the top level codec, so also set the address and commandName 
-    // from up here for neatness.
-    message.metadata.address = address
-    message.metadata.commandName = commandName
 
     return this.push(message, cancellationToken);
   }

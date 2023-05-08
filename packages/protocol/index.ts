@@ -16,5 +16,6 @@ export {
 export { CodecPipeline } from './src/codecs'
 export { HintValidatorFirmwareAddressPoll } from './src/hint-validator'
 export { ReqResQueuePipeline } from './src/reqres-pipeline'
+export { AutoQueryPipeline } from './src/auto-query'
 
 export type { COMMAND_NAME } from "./src/common";
